@@ -60,33 +60,30 @@ def TransfMatGenerator(Theta, m, nw, fixedseed):
     return MatrixList
 
 
-TransfMatGenerator(np.pi/4 + 0.005, 8, 100, 42)
-
-
 # Lyapunov Exponent Finder
 
 def LyapFinder(w, MatrixList):
     m = len(MatrixList[0])
     n = len(MatrixList)//w
-    L = np.identity(m)
+    L = np.eye(m)
     LyapList = np.zeros(m)
     
     for q in range(0, n-1):
         
-        if len(MatrixList[q*w : (q+1)*w+1]) < 2: 
-            H = MatrixList[q*w : (q+1)*w+1]
+        if len(MatrixList[q*w : (q+1)*w]) < 2: 
+            H = MatrixList[q*w : (q+1)*w][0]
         else: 
-            H = np.linalg.multi_dot(MatrixList[q*w : (q+1)*w+1])
+            H = np.linalg.multi_dot(MatrixList[q*w : (q+1)*w])
 
         B = H @ L
         LU = sp.linalg.lu(B)[1:3]
-        L = LU[0] + np.identity(m)
+        L = LU[0]
         LyapList = LyapList + np.log(np.abs(np.diagonal(LU[1])))
 
-    if len(MatrixList[(n-1)*w-1 : n*w+1]) < 2:
-        H = MatrixList[(n-1)*w-1 : n*w+1]
+    if len(MatrixList[(n-1)*w : n*w]) < 2:
+        H = MatrixList[(n-1)*w : n*w][0]
     else:
-        H = np.linalg.multi_dot(MatrixList[(n-1)*w-1 : n*w+1])
+        H = np.linalg.multi_dot(MatrixList[(n-1)*w : n*w])
 
     B = H @ L
     LyapList = LyapList + np.log(np.abs(np.diagonal(sp.linalg.qr(B)[1])))
@@ -99,34 +96,44 @@ def LyapFinder(w, MatrixList):
 def fullfunction(ngen, n, m, w, Theta, seed):
     MatrixList = TransfMatGenerator(Theta, m, ngen*w, seed)
     print("Matrices generated")
-    nmax = min(ngen, n)
-    LyapFinder(w, MatrixList[0 : nmax])
+    nmax = min([ngen, n])
+    
+    return LyapFinder(w, MatrixList[0 : nmax])
 
 
 # Testing
 
-fullfunction(1000, 1000, 8, 1, np.pi/4 + 0.005, 42)
+fullfunction(1000, 1000, 8, 1, np.pi/4 + 0.005, 1)
 
-fullfunction(100000, 100000, 16, 1, np.pi/4 + 0.005, 42)
+fullfunction(10000, 10000, 16, 1, np.pi/4 + 0.005, 42)
 
 
 # Generate Lyapunov Exponents for List of Thetas
 
 def ListLyap(ngen, n, m, w, ThetaList, seed):
-    nmax = min(ngen, n)
+    nmax = min([ngen, n])
     LyapList = []
     for j in range(0, len(ThetaList)):
         MatrixList = TransfMatGenerator(ThetaList[j], m, ngen*w, seed)
         WholeList = LyapFinder(w, MatrixList[0:nmax])
-        LyapList.append([ThetaList[j], -1/max([x for x in WholeList if x < 0])])
+        LyapList.append([ThetaList[j], -1/max([x for x in WholeList if x<0])])
+        
     return LyapList
 
 
 # Testing
 
-testlist = ListLyap(10000, 10000, 16, 1, np.arange(0.1, 1.7, 0.1), 1)
+testlist = ListLyap(1000, 1000, 16, 1, np.arange(0.1, 1.7, 0.1), 1)
 
 # +
 import matplotlib.pyplot as plt
+from scipy.optimize import curve_fit
 
-plt.scatter(np.array(testlist)[:,0], np.array(testlist)[:,1])
+def gauss(x, H, A, x0, sigma):
+    return H + A * np.exp(-(x - x0) ** 2 / (2 * sigma ** 2))
+
+GaussianFit = curve_fit(gauss, np.array(testlist)[:,0], np.array(testlist)[:,1])[0]
+
+plt.scatter(np.array(testlist)[:,0], np.array(testlist)[:,1], s=15);
+plt.plot(np.arange(0.1,1.7,0.01), gauss(np.arange(0.1,1.7, 0.01), *GaussianFit));
+plt.vlines(GaussianFit[2],min(np.array(testlist)[:,1]), max(np.array(testlist)[:,1]), color='red')
