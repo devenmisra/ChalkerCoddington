@@ -101,13 +101,6 @@ def fullfunction(ngen, n, m, w, Theta, seed):
     return LyapFinder(w, MatrixList[0 : nmax])
 
 
-# Testing
-
-fullfunction(1000, 1000, 8, 1, np.pi/4 + 0.005, 1)
-
-fullfunction(10000, 10000, 16, 1, np.pi/4 + 0.005, 42)
-
-
 # Generate Lyapunov Exponents for List of Thetas
 
 def ListLyap(ngen, n, m, w, ThetaList, seed):
