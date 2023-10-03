@@ -112,10 +112,21 @@ fullfunction(100000, 100000, 16, 1, np.pi/4 + 0.005, 42)
 
 # Generate Lyapunov Exponents for List of Thetas
 
-def LyapFromTheta(ngen, n, m, w, ThetaList, seed):
+def ListLyap(ngen, n, m, w, ThetaList, seed):
     nmax = min(ngen, n)
     LyapList = []
     for j in range(0, len(ThetaList)):
         MatrixList = TransfMatGenerator(ThetaList[j], m, ngen*w, seed)
         WholeList = LyapFinder(w, MatrixList[0:nmax])
-        LyapList.append(ThetaList[j])
+        LyapList.append([ThetaList[j], -1/max([x for x in WholeList if x < 0])])
+    return LyapList
+
+
+# Testing
+
+testlist = ListLyap(10000, 10000, 16, 1, np.arange(0.1, 1.7, 0.1), 1)
+
+# +
+import matplotlib.pyplot as plt
+
+plt.scatter(np.array(testlist)[:,0], np.array(testlist)[:,1])
