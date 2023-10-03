@@ -110,13 +110,13 @@ def ListLyap(ngen, n, m, w, ThetaList, seed):
         MatrixList = TransfMatGenerator(ThetaList[j], m, ngen*w, seed)
         WholeList = LyapFinder(w, MatrixList[0:nmax])
         LyapList.append([ThetaList[j], -1/max([x for x in WholeList if x<0])])
-        
-    return LyapList
+
+    return np.array(LyapList)
 
 
 # Testing
 
-testlist = ListLyap(1000, 1000, 16, 1, np.arange(0.1, 1.7, 0.1), 1)
+testlist = ListLyap(10000, 10000, 16, 1, np.arange(0.1, 1.7, 0.1), 1)
 
 # +
 import matplotlib.pyplot as plt
@@ -125,8 +125,8 @@ from scipy.optimize import curve_fit
 def gauss(x, H, A, x0, sigma):
     return H + A * np.exp(-(x - x0) ** 2 / (2 * sigma ** 2))
 
-GaussianFit = curve_fit(gauss, np.array(testlist)[:,0], np.array(testlist)[:,1])[0]
+GaussianFit = curve_fit(gauss, testlist[:,0], testlist[:,1])[0]
 
-plt.scatter(np.array(testlist)[:,0], np.array(testlist)[:,1], s=15);
+plt.scatter(testlist[:,0], testlist[:,1], s=15);
 plt.plot(np.arange(0.1,1.7,0.01), gauss(np.arange(0.1,1.7, 0.01), *GaussianFit));
-plt.vlines(GaussianFit[2],min(np.array(testlist)[:,1]), max(np.array(testlist)[:,1]), color='red')
+plt.vlines(GaussianFit[2],min(testlist[:,1]), max(testlist[:,1]), color='red')
