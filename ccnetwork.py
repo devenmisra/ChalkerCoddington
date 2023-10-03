@@ -74,11 +74,11 @@ def LyapFinder(w, MatrixList):
     for q in range(0, n-1):
         H = np.linalg.multi_dot(MatrixList[q*w : (q+1)*w])
         B = H @ L
-        LyapList = LyapList + np.log(np.abs(np.diagonal(sp.linalg.triu(LU))))
-        LU = sp.linalg.lu(B)[[0]]
+        LU = sp.linalg.lu(B)[0]
         L = sp.linalg.tril(LU, k = -1) + np.identity(m)
+        LyapList = LyapList + np.log(np.abs(np.diagonal(sp.linalg.triu(LU))))
 
-    H = sp.linalg.multi_dot(MatrixList[(n-1)*w : n*w])
+    H = np.linalg.multi_dot(MatrixList[(n-1)*w : n*w])
     B = H @ L
     LyapList = LyapList + np.log(np.abs(np.diagonal(sp.linalg.qr(B)[1])))
 
@@ -96,4 +96,4 @@ def fullfunction(ngen, n, m, w, Theta, seed):
 
 # Testing
 
-fullfunction(100, 100, 8, 1, np.pi/4 + 0.005, 42)
+fullfunction(100, 100, 8, 2, np.pi/4 + 0.005, 42)
