@@ -22,9 +22,9 @@ def ATransferMatrixGenerator(S, T, m, diagValues):
     Phi = np.diag(diagValues)
     A = np.array([[S, -T], [-T, S]])
     diagBlocks = []
-    for i in range(m-1): 
+    for i in range(m): 
         diagBlocks.append(A)
-    Turn = sp.linalg.block_diag(np.tile(A, m))
+    Turn = sp.linalg.block_diag(*diagBlocks)
     
     return Turn @ Phi
 
