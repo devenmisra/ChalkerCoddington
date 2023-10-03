@@ -74,9 +74,9 @@ def LyapFinder(w, MatrixList):
     for q in range(0, n-1):
         H = np.linalg.multi_dot(MatrixList[q*w : (q+1)*w])
         B = H @ L
-        LU = sp.linalg.lu(B)[0]
-        L = sp.linalg.tril(LU, k = -1) + np.identity(m)
-        LyapList = LyapList + np.log(np.abs(np.diagonal(sp.linalg.triu(LU))))
+        LU = sp.linalg.lu(B)[1:3]
+        L = LU[0] + np.identity(m)
+        LyapList = LyapList + np.log(np.abs(np.diagonal(LU[1])))
 
     H = np.linalg.multi_dot(MatrixList[(n-1)*w : n*w])
     B = H @ L
