@@ -22,7 +22,7 @@ def ATransferMatrixGenerator(S, T, m, diagValues):
     Phi = np.diag(diagValues)
     A = np.array([[S, -T], [-T, S]])
     diagBlocks = []
-    for i in range(m): 
+    for i in range(m-1): 
         diagBlocks.append(A)
     Turn = sp.linalg.block_diag(np.tile(A, m))
     
@@ -58,6 +58,9 @@ def TransfMatGenerator(Theta, m, nw, fixedseed):
         MatrixList.append(AB)
     
     return MatrixList
+
+
+TransfMatGenerator(np.pi/4 + 0.005, 8, 100, 42)
 
 
 # Lyapunov Exponent Finder
