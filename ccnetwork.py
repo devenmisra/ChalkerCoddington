@@ -72,13 +72,22 @@ def LyapFinder(w, MatrixList):
     LyapList = np.zeros(m)
     
     for q in range(0, n-1):
-        H = np.linalg.multi_dot(MatrixList[q*w : (q+1)*w])
+        
+        if len(MatrixList[q*w : (q+1)*w+1]) < 2: 
+            H = MatrixList[q*w : (q+1)*w+1]
+        else: 
+            H = np.linalg.multi_dot(MatrixList[q*w : (q+1)*w+1])
+
         B = H @ L
         LU = sp.linalg.lu(B)[1:3]
         L = LU[0] + np.identity(m)
         LyapList = LyapList + np.log(np.abs(np.diagonal(LU[1])))
 
-    H = np.linalg.multi_dot(MatrixList[(n-1)*w : n*w])
+    if len(MatrixList[(n-1)*w-1 : n*w+1]) < 2:
+        H = MatrixList[(n-1)*w-1 : n*w+1]
+    else:
+        H = np.linalg.multi_dot(MatrixList[(n-1)*w-1 : n*w+1])
+
     B = H @ L
     LyapList = LyapList + np.log(np.abs(np.diagonal(sp.linalg.qr(B)[1])))
 
@@ -96,4 +105,17 @@ def fullfunction(ngen, n, m, w, Theta, seed):
 
 # Testing
 
-fullfunction(100, 100, 8, 2, np.pi/4 + 0.005, 42)
+fullfunction(1000, 1000, 8, 1, np.pi/4 + 0.005, 42)
+
+fullfunction(100000, 100000, 16, 1, np.pi/4 + 0.005, 42)
+
+
+# Generate Lyapunov Exponents for List of Thetas
+
+def LyapFromTheta(ngen, n, m, w, ThetaList, seed):
+    nmax = min(ngen, n)
+    LyapList = []
+    for j in range(0, len(ThetaList)):
+        MatrixList = TransfMatGenerator(ThetaList[j], m, ngen*w, seed)
+        WholeList = LyapFinder(w, MatrixList[0:nmax])
+        LyapList.append(ThetaList[j])
