@@ -3,8 +3,8 @@
 #   jupytext:
 #     text_representation:
 #       extension: .py
-#       format_name: percent
-#       format_version: '1.3'
+#       format_name: light
+#       format_version: '1.5'
 #       jupytext_version: 1.15.2
 #   kernelspec:
 #     display_name: Python 3 (ipykernel)
@@ -12,10 +12,9 @@
 #     name: python3
 # ---
 
-# %% [markdown]
 # A & B Matrices
 
-# %%
+# +
 import numpy as np
 import scipy as sp
 
@@ -41,10 +40,10 @@ def BTransferMatrixGenerator(C_s, C_o, m, diagValues):
     return Turn @ Phi
 
 
-# %% [markdown]
+# -
+
 # Transfer Matrix Generator
 
-# %%
 def TransfMatGenerator(Theta, m, nw, fixedseed): 
     S = 1/np.cos(Theta)
     T = np.tan(Theta)
@@ -54,17 +53,15 @@ def TransfMatGenerator(Theta, m, nw, fixedseed):
     phases = np.exp(2*np.pi*1j*np.random.rand(nw, 2, 2*m))
     MatrixList = []
     
-    for j in range(1, nw+1):
+    for j in range(0, nw):
         AB = ATransferMatrixGenerator(S, T, m, phases[j,0]) @ BTransferMatrixGenerator(Cs, Co, m, phases[j,1])
         MatrixList.append(AB)
     
     return MatrixList
 
 
-# %% [markdown]
 # Lyapunov Exponent Finder
 
-# %%
 def LyapFinder(w, MatrixList):
     m = len(MatrixList[0])
     n = len(MatrixList)//w
@@ -85,10 +82,8 @@ def LyapFinder(w, MatrixList):
     return LyapList/len(MatrixList)
 
 
-# %% [markdown]
 # Complete Function
 
-# %%
 def fullfunction(ngen, n, m, w, Theta, seed):
     MatrixList = TransfMatGenerator(Theta, m, ngen*w, seed)
     print("Matrices generated")
@@ -96,8 +91,6 @@ def fullfunction(ngen, n, m, w, Theta, seed):
     LyapFinder(w, MatrixList[0 : nmax])
 
 
-# %% [markdown]
 # Testing
 
-# %%
 fullfunction(100, 100, 8, 1, np.pi/4 + 0.005, 42)
