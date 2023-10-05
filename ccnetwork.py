@@ -60,6 +60,51 @@ def TransfMatGenerator(Theta, m, nw, fixedseed):
     return MatrixList
 
 
+# Extract Blocks from Block Diagonal Matrix
+
+def extract_block_diag(A,M,k=0):
+    """Extracts blocks of size M from the kth diagonal
+    of square matrix A, whose size must be a multiple of M."""
+
+    # Check that the matrix can be block divided
+    if A.shape[0] != A.shape[1] or A.shape[0] % M != 0:
+        raise StandardError('Matrix must be square and a multiple of block size')
+
+    # Assign indices for offset from main diagonal
+    if abs(k) > M - 1:
+        raise StandardError('kth diagonal does not exist in matrix')
+    elif k > 0:
+        ro = 0
+        co = abs(k)*M 
+    elif k < 0:
+        ro = abs(k)*M
+        co = 0
+    else:
+        ro = 0
+        co = 0
+
+    blocks = np.array([A[i+ro:i+ro+M,i+co:i+co+M] for i in range(0,len(A)-abs(k)*M,M)])
+    
+    return blocks
+
+
+# Node Insertions
+
+def TransfMatInsert(MatrixList, m, nw, InsertProbability, InsertMatrix): 
+
+    for i in range(nw):
+        diagBlocks = extract_block_diag(MatrixList[i] ,2)
+    
+        for j in range(m):
+            if np.random.rand(m)[j] > InsertProbability:
+                diagBlocks[j] = InsertMatrix
+
+        A = sp.linalg.block_diag(diagBlocks)
+        MatrixList[i] = A
+
+    return MatrixList
+
+
 # Lyapunov Exponent Finder
 
 def LyapFinder(w, MatrixList):
@@ -91,17 +136,16 @@ def LyapFinder(w, MatrixList):
     return LyapList/len(MatrixList)
 
 
-# Complete Function
+# Generate Lyapunov Exponents for a Single Value of Theta
 
-def fullfunction(ngen, n, m, w, Theta, seed):
+def SingleLyap(ngen, n, m, w, Theta, seed):
     MatrixList = TransfMatGenerator(Theta, m, ngen*w, seed)
-    print("Matrices generated")
     nmax = min([ngen, n])
     
     return LyapFinder(w, MatrixList[0 : nmax])
 
 
-# Generate Lyapunov Exponents for List of Thetas
+# Generate Lyapunov Exponents for a List of Theta Values
 
 def ListLyap(ngen, n, m, w, ThetaList, seed):
     nmax = min([ngen, n])
@@ -116,7 +160,7 @@ def ListLyap(ngen, n, m, w, ThetaList, seed):
 
 # Testing
 
-testlist = ListLyap(10000, 10000, 16, 1, np.arange(0.1, 1.7, 0.1), 1)
+testList = ListLyap(100000, 100000, 16, 1, np.arange(0.1, 1.7, 0.1), 1)
 
 # +
 import matplotlib.pyplot as plt
@@ -125,8 +169,8 @@ from scipy.optimize import curve_fit
 def gauss(x, H, A, x0, sigma):
     return H + A * np.exp(-(x - x0) ** 2 / (2 * sigma ** 2))
 
-GaussianFit = curve_fit(gauss, testlist[:,0], testlist[:,1])[0]
+GaussianFit = curve_fit(gauss, testList[:,0], testList[:,1])[0]
 
-plt.scatter(testlist[:,0], testlist[:,1], s=15);
+plt.scatter(testList[:,0], testList[:,1], s=15);
 plt.plot(np.arange(0.1,1.7,0.01), gauss(np.arange(0.1,1.7, 0.01), *GaussianFit));
-plt.vlines(GaussianFit[2],min(testlist[:,1]), max(testlist[:,1]), color='red')
+plt.vlines(GaussianFit[2],min(testList[:,1]), max(testList[:,1]), color='red');
