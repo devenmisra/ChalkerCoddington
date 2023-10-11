@@ -35,7 +35,7 @@ def BTransferMatrixGenerator(C_s, C_o, m, diagValues):
     for i in range(m-1): 
         diagBlocks.append(A)
     diagBlocks.append(np.array(A[0,0]))
-    Turn = sp.linalg.block_diag(*diagBlocks) + sp.sparse.coo_array(([A[1, 0], A[0,1]], [(0, 2*m-1), (2*m-1, 0)]))
+    Turn = sp.linalg.block_diag(*diagBlocks) + sp.sparse.coo_array(([A[1,0], A[0,1]], [(0, 2*m-1), (2*m-1, 0)]))
 
     return Turn @ Phi
 
@@ -44,64 +44,90 @@ def BTransferMatrixGenerator(C_s, C_o, m, diagValues):
 
 # Transfer Matrix Generator
 
-def TransfMatGenerator(Theta, m, nw, fixedseed): 
+def TransfMatGenerator(Theta, m, nw, seed): 
     S = 1/np.cos(Theta)
     T = np.tan(Theta)
     Cs = 1/np.sin(Theta)
     Co = np.cos(Theta)/np.sin(Theta)
-    np.random.seed(seed=fixedseed)
+    np.random.seed(seed)
     phases = np.exp(2*np.pi*1j*np.random.rand(nw, 2, 2*m))
     MatrixList = []
     
     for j in range(0, nw):
+
         AB = ATransferMatrixGenerator(S, T, m, phases[j,0]) @ BTransferMatrixGenerator(Cs, Co, m, phases[j,1])
         MatrixList.append(AB)
     
     return MatrixList
 
 
-# Extract Blocks from Block Diagonal Matrix
+# Transfer Matrix Generator (w/ One-Loop Insertions)
 
-def extract_block_diag(A,M,k=0):
-    """Extracts blocks of size M from the kth diagonal
-    of square matrix A, whose size must be a multiple of M."""
-
-    # Check that the matrix can be block divided
-    if A.shape[0] != A.shape[1] or A.shape[0] % M != 0:
-        raise StandardError('Matrix must be square and a multiple of block size')
-
-    # Assign indices for offset from main diagonal
-    if abs(k) > M - 1:
-        raise StandardError('kth diagonal does not exist in matrix')
-    elif k > 0:
-        ro = 0
-        co = abs(k)*M 
-    elif k < 0:
-        ro = abs(k)*M
-        co = 0
-    else:
-        ro = 0
-        co = 0
-
-    blocks = np.array([A[i+ro:i+ro+M,i+co:i+co+M] for i in range(0,len(A)-abs(k)*M,M)])
+# +
+def extract_block_diag_A(A,M):
+    
+    blocks = np.array([A[i:i+M,i:i+M] for i in range(0,len(A),M)])
     
     return blocks
 
+def extract_block_diag_B(A,M,m):
 
-# Node Insertions
+    edge = np.array([[A[0,0], A[0,2*m-1]], [A[2*m-1, 0], A[2*m-1, 2*m-1]]])
+    blocks = np.array([A[i:i+M,i:i+M] for i in range(1,len(A)-1,M)])
 
-def TransfMatInsert(MatrixList, m, nw, InsertProbability, InsertMatrix): 
+    return np.stack([edge, *blocks])
 
-    for i in range(nw):
-        diagBlocks = extract_block_diag(MatrixList[i] ,2)
+def RMatrixGenerator(MatrixType, ATransfMatList, BTransfMatList, m): 
+    randIndex = np.random.randint(0, m, size=10)
+
+    if MatrixType == 'A':
+        M = sp.linalg.block_diag(ATransfMatList[randIndex[0]], ATransfMatList[randIndex[1]]) @ sp.linalg.block_diag(1, BTransfMatList[randIndex[2]], 1) @ sp.linalg.block_diag(ATransfMatList[randIndex[3]], ATransfMatList[randIndex[4]])
+
+    if MatrixType == 'B': 
+        M = sp.linalg.block_diag(BTransfMatList[randIndex[5]], BTransfMatList[randIndex[6]]) @ sp.linalg.block_diag(1, ATransfMatList[randIndex[7]], 1) @ sp.linalg.block_diag(BTransfMatList[randIndex[8]], BTransfMatList[randIndex[9]])
     
-        for j in range(m):
-            if np.random.rand(m)[j] > InsertProbability:
-                diagBlocks[j] = InsertMatrix
+    R_00 = M[0,0] + (M[0,1] + M[0,2])*(M[2,0] - M[1,0]) / (M[1,1] + M[1,2] - M[2,1] - M[2,2])
+    R_01 = M[0,3] + (M[0,1] + M[0,2])*(M[2,3] - M[1,3]) / (M[1,1] + M[1,2] - M[2,1] - M[2,2])
+    R_10 = M[3,0] + (M[3,1] + M[3,2])*(M[2,0] - M[1,0]) / (M[1,1] + M[1,2] - M[2,1] - M[2,2])
+    R_11 = M[3,3] + (M[3,1] + M[3,2])*(M[2,3] - M[1,3]) / (M[1,1] + M[1,2] - M[2,1] - M[2,2])
 
-        A = sp.linalg.block_diag(diagBlocks)
-        MatrixList[i] = A
+    RMatrix = np.array([[R_00, R_01], [R_10, R_11]])
+    
+    return RMatrix
 
+
+# -
+
+def TransfMatGenerator_withReplacement(Theta, m, nw, seed, insertProbability=0.5): 
+    S = 1/np.cos(Theta)
+    T = np.tan(Theta)
+    Cs = 1/np.sin(Theta)
+    Co = np.cos(Theta)/np.sin(Theta)
+    np.random.seed(seed)
+    phases = np.exp(2*np.pi*1j*np.random.rand(nw, 2, 2*m))
+    MatrixList = []
+    
+    for j in range(0, nw):
+        A = ATransferMatrixGenerator(S, T, m, phases[j,0])
+        diagBlocksA = extract_block_diag_A(A, 2)
+
+        B = BTransferMatrixGenerator(Cs, Co, m, phases[j,1])
+        diagBlocksB = extract_block_diag_B(B, 2, m)
+
+        for i in range(m): 
+            if np.random.rand(m)[i] > insertProbability:
+                diagBlocksA[i] = RMatrixGenerator('A', diagBlocksA, diagBlocksB, m)
+
+            if np.random.rand(m)[i] > insertProbability:
+                diagBlocksB[i] = RMatrixGenerator('B', diagBlocksA, diagBlocksB, m)
+
+        A_R = sp.linalg.block_diag(*diagBlocksA)
+        B_R = sp.linalg.block_diag(*[diagBlocksB[0][0,0], *diagBlocksB[1:], diagBlocksB[0][1,1]]) +  sp.sparse.coo_array(([diagBlocksB[0][0,1], diagBlocksB[0][1,0]], [(0, 2*m-1), (2*m-1, 0)]))
+
+        AB_R = A_R @ B_R
+
+        MatrixList.append(AB_R)
+    
     return MatrixList
 
 
@@ -151,7 +177,7 @@ def ListLyap(ngen, n, m, w, ThetaList, seed):
     nmax = min([ngen, n])
     LyapList = []
     for j in range(0, len(ThetaList)):
-        MatrixList = TransfMatGenerator(ThetaList[j], m, ngen*w, seed)
+        MatrixList = TransfMatGenerator_withReplacement(ThetaList[j], m, ngen*w, seed)
         WholeList = LyapFinder(w, MatrixList[0:nmax])
         LyapList.append([ThetaList[j], -1/max([x for x in WholeList if x<0])])
 
@@ -160,7 +186,7 @@ def ListLyap(ngen, n, m, w, ThetaList, seed):
 
 # Testing
 
-testList = ListLyap(100000, 100000, 16, 1, np.arange(0.1, 1.7, 0.1), 1)
+testList = ListLyap(10000, 10000, 16, 1, np.arange(0.1, 1.7, 0.1), 1)
 
 # +
 import matplotlib.pyplot as plt
@@ -174,3 +200,4 @@ GaussianFit = curve_fit(gauss, testList[:,0], testList[:,1])[0]
 plt.scatter(testList[:,0], testList[:,1], s=15);
 plt.plot(np.arange(0.1,1.7,0.01), gauss(np.arange(0.1,1.7, 0.01), *GaussianFit));
 plt.vlines(GaussianFit[2],min(testList[:,1]), max(testList[:,1]), color='red');
+print(GaussianFit[2])
