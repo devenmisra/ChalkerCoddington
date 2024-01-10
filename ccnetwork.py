@@ -5,7 +5,7 @@
 #       extension: .py
 #       format_name: light
 #       format_version: '1.5'
-#       jupytext_version: 1.15.2
+#       jupytext_version: 1.16.0
 #   kernelspec:
 #     display_name: Python 3 (ipykernel)
 #     language: python
@@ -186,18 +186,62 @@ def ListLyap(ngen, n, m, w, ThetaList, seed):
 
 # Testing
 
-testList = ListLyap(10000, 10000, 16, 1, np.arange(0.1, 1.7, 0.1), 1)
+import pickle
+
+testList = dict()
+
+# +
+testList['2'] = ListLyap(100000, 100000, 2, 1, np.arange(0.1, 1.7, 0.1), 1)
+
+with open('lyapDict.pickle', 'wb') as handle:
+    pickle.dump(testList, handle, protocol=pickle.HIGHEST_PROTOCOL)
+
+# +
+testList['4'] = ListLyap(100000, 100000, 4, 1, np.arange(0.1, 1.7, 0.1), 1)
+
+with open('lyapDict.pickle', 'wb') as handle:
+    pickle.dump(testList, handle, protocol=pickle.HIGHEST_PROTOCOL)
+
+# +
+testList['8'] = ListLyap(100000, 100000, 8, 1, np.arange(0.1, 1.7, 0.1), 1)
+
+with open('lyapDict.pickle', 'wb') as handle:
+    pickle.dump(testList, handle, protocol=pickle.HIGHEST_PROTOCOL)
+
+# +
+testList['16'] = ListLyap(100000, 100000, 16, 1, np.arange(0.1, 1.7, 0.1), 1)
+
+with open('lyapDict.pickle', 'wb') as handle:
+    pickle.dump(testList, handle, protocol=pickle.HIGHEST_PROTOCOL)
+
+# +
+testList['32'] = ListLyap(100000, 100000, 32, 1, np.arange(0.1, 1.7, 0.1), 1)
+
+with open('lyapDict.pickle', 'wb') as handle:
+    pickle.dump(testList, handle, protocol=pickle.HIGHEST_PROTOCOL)
+
+# +
+testList['64'] = ListLyap(100000, 100000, 64, 1, np.arange(0.1, 1.7, 0.1), 1)
+
+with open('lyapDict.pickle', 'wb') as handle:
+    pickle.dump(testList, handle, protocol=pickle.HIGHEST_PROTOCOL)
+# -
+
+with open('lyapDict.pickle', 'rb') as handle:
+    testList = pickle.load(handle)
 
 # +
 import matplotlib.pyplot as plt
 from scipy.optimize import curve_fit
 
+width = 64
+
 def gauss(x, H, A, x0, sigma):
     return H + A * np.exp(-(x - x0) ** 2 / (2 * sigma ** 2))
 
-GaussianFit = curve_fit(gauss, testList[:,0], testList[:,1])[0]
+GaussianFit = curve_fit(gauss, testList[f'{width}'][:,0], testList[f'{width}'][:,1])[0]
 
-plt.scatter(testList[:,0], testList[:,1], s=15);
+plt.scatter(testList[f'{width}'][:,0], testList[f'{width}'][:,1], s=15);
 plt.plot(np.arange(0.1,1.7,0.01), gauss(np.arange(0.1,1.7, 0.01), *GaussianFit));
-plt.vlines(GaussianFit[2],min(testList[:,1]), max(testList[:,1]), color='red');
+plt.vlines(GaussianFit[2],min(testList[f'{width}'][:,1]), max(testList[f'{width}'][:,1]), color='red');
 print(GaussianFit[2])
