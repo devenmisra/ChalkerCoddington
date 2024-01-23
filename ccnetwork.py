@@ -98,7 +98,7 @@ def RMatrixGenerator(MatrixType, ATransfMatList, BTransfMatList, m):
 
 # -
 
-def TransfMatGenerator_withReplacement(Theta, m, nw, seed, insertProbability=0.5): 
+def TransfMatGenerator_withReplacement(Theta, m, nw, seed, insertProbability=0.0): 
     S = 1/np.cos(Theta)
     T = np.tan(Theta)
     Cs = 1/np.sin(Theta)
@@ -184,48 +184,43 @@ def ListLyap(ngen, n, m, w, ThetaList, seed):
     return np.array(LyapList)
 
 
+# Extra Functions for Batch Processing
+
+def BatchList(ngen, n, m, w, ThetaList, seed):
+    nmax = min([ngen, n])
+    WholeList = []
+    for j in range(0, len(ThetaList)):
+        MatrixList = TransfMatGenerator_withReplacement(ThetaList[j], m, ngen*w, seed)
+        WholeList.append(LyapFinder(w, MatrixList[0:nmax]))
+
+    return np.array(WholeList)
+
+
+def LyapListPairs(WholeList):
+    LyapListPairs = []
+    LyapList.append([ThetaList[j], -1/max([x for x in WholeList if x<0])])
+
+    return np.array(LyapListPairs)
+
+
 # Testing
 
 import pickle
 
 testList = dict()
+lengths = map(int, [1e5, 1e5, 2.5e5, 5e5, 5e5, 1e6, 2e6, 2.25e6])
+widths = [10, 20, 30, 40, 50, 60, 70, 80]
+critVal = np.pi/4
+thetaRange = critVal * (1 + np.linspace(-0.16, 0.16, 17))
 
-# +
-testList['2'] = ListLyap(100000, 100000, 2, 1, np.arange(0.1, 1.7, 0.1), 1)
+for length, width in zip(lengths, widths): 
+    
+    testList[f'{width}'] = ListLyap(length, length, width, 8, thetaRange, 42)
 
-with open('lyapDict.pickle', 'wb') as handle:
-    pickle.dump(testList, handle, protocol=pickle.HIGHEST_PROTOCOL)
+    with open('lyapDict.pickle', 'wb') as handle:
+        pickle.dump(testList, handle, protocol=pickle.HIGHEST_PROTOCOL)
 
-# +
-testList['4'] = ListLyap(100000, 100000, 4, 1, np.arange(0.1, 1.7, 0.1), 1)
-
-with open('lyapDict.pickle', 'wb') as handle:
-    pickle.dump(testList, handle, protocol=pickle.HIGHEST_PROTOCOL)
-
-# +
-testList['8'] = ListLyap(100000, 100000, 8, 1, np.arange(0.1, 1.7, 0.1), 1)
-
-with open('lyapDict.pickle', 'wb') as handle:
-    pickle.dump(testList, handle, protocol=pickle.HIGHEST_PROTOCOL)
-
-# +
-testList['16'] = ListLyap(100000, 100000, 16, 1, np.arange(0.1, 1.7, 0.1), 1)
-
-with open('lyapDict.pickle', 'wb') as handle:
-    pickle.dump(testList, handle, protocol=pickle.HIGHEST_PROTOCOL)
-
-# +
-testList['32'] = ListLyap(100000, 100000, 32, 1, np.arange(0.1, 1.7, 0.1), 1)
-
-with open('lyapDict.pickle', 'wb') as handle:
-    pickle.dump(testList, handle, protocol=pickle.HIGHEST_PROTOCOL)
-
-# +
-testList['64'] = ListLyap(100000, 100000, 64, 1, np.arange(0.1, 1.7, 0.1), 1)
-
-with open('lyapDict.pickle', 'wb') as handle:
-    pickle.dump(testList, handle, protocol=pickle.HIGHEST_PROTOCOL)
-# -
+    print(f'Completed M = {width}')
 
 with open('lyapDict.pickle', 'rb') as handle:
     testList = pickle.load(handle)
@@ -234,7 +229,8 @@ with open('lyapDict.pickle', 'rb') as handle:
 import matplotlib.pyplot as plt
 from scipy.optimize import curve_fit
 
-width = 64
+width = 20
+GRange = critVal * (1 + np.linspace(-0.16, 0.16, 65))
 
 def gauss(x, H, A, x0, sigma):
     return H + A * np.exp(-(x - x0) ** 2 / (2 * sigma ** 2))
@@ -242,6 +238,6 @@ def gauss(x, H, A, x0, sigma):
 GaussianFit = curve_fit(gauss, testList[f'{width}'][:,0], testList[f'{width}'][:,1])[0]
 
 plt.scatter(testList[f'{width}'][:,0], testList[f'{width}'][:,1], s=15);
-plt.plot(np.arange(0.1,1.7,0.01), gauss(np.arange(0.1,1.7, 0.01), *GaussianFit));
+plt.plot(range, gauss(range, *GaussianFit));
 plt.vlines(GaussianFit[2],min(testList[f'{width}'][:,1]), max(testList[f'{width}'][:,1]), color='red');
 print(GaussianFit[2])
