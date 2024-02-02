@@ -175,13 +175,13 @@ def SingleLyap(ngen, n, m, w, Theta, seed):
 
 def ListLyap(ngen, n, m, w, ThetaList, seed):
     nmax = min([ngen, n])
-    LyapList = []
+    LyapRange = []
     for j in range(0, len(ThetaList)):
         MatrixList = TransfMatGenerator_withReplacement(ThetaList[j], m, ngen*w, seed)
         WholeList = LyapFinder(w, MatrixList[0:nmax])
-        LyapList.append([ThetaList[j], -1/max([x for x in WholeList if x<0])])
+        LyapRange.append([ThetaList[j], -1/max([x for x in WholeList if x<0])])
 
-    return np.array(LyapList)
+    return np.array(LyapRange)
 
 
 # Extra Functions for Batch Processing
@@ -196,40 +196,82 @@ def BatchList(ngen, n, m, w, ThetaList, seed):
     return np.array(WholeList)
 
 
-def LyapListPairs(WholeList):
-    LyapListPairs = []
-    LyapList.append([ThetaList[j], -1/max([x for x in WholeList if x<0])])
+def LyapListPairs(WholeList, ThetaList):
+    LyapRange = []
+    for j in range(0, len(ThetaList)):
+        LyapRange.append([ThetaList[j], -1/max([x for x in WholeList[j] if x<0])])
 
-    return np.array(LyapListPairs)
+    return np.array(LyapRange)
 
 
 # Testing
 
 import pickle
+import time
 
 testList = dict()
-lengths = map(int, [1e5, 1e5, 2.5e5, 5e5, 5e5, 1e6, 2e6, 2.25e6])
+lengths = map(int, [1e3, 1e3, 2.5e3, 5e3, 5e3, 1e4, 2e4, 2.25e4])
 widths = [10, 20, 30, 40, 50, 60, 70, 80]
 critVal = np.pi/4
 thetaRange = critVal * (1 + np.linspace(-0.16, 0.16, 17))
 
-for length, width in zip(lengths, widths): 
+lengths = map(int, [1e3, 1e3, 2.5e3, 5e3, 5e3, 1e4])
+widths = [10, 20, 30, 40, 50, 60]
+critVal = np.pi/4
+thetaRange = critVal * (1 + np.linspace(-0.16, 0.16, 17))
+
+for nbatch in range(1,101): 
+
+    lengths = map(int, [1e3, 1e3, 2.5e3, 5e3, 5e3, 1e4])
+    widths = [10, 20, 30, 40, 50, 60]
+    critVal = np.pi/4
+    thetaRange = critVal * (1 + np.linspace(-0.16, 0.16, 17))
+
+    print(f"Processing Batch {nbatch}")
+
+    testList = dict()
+
+    for length, width in zip(lengths, widths): 
+
+        start = time.process_time()
     
-    testList[f'{width}'] = ListLyap(length, length, width, 8, thetaRange, 42)
+        testList[f'{width}'] = BatchList(length, length, width, 1, thetaRange, seed=nbatch)
 
-    with open('lyapDict.pickle', 'wb') as handle:
-        pickle.dump(testList, handle, protocol=pickle.HIGHEST_PROTOCOL)
+        with open(f'batchLyapData/batchLyapDict{nbatch}.pickle', 'wb') as handle:
+            pickle.dump(testList, handle, protocol=pickle.HIGHEST_PROTOCOL)
 
-    print(f'Completed M = {width}')
+        print(f'Completed M = {width} | CPU Time: {time.process_time() - start}')
 
-with open('lyapDict.pickle', 'rb') as handle:
-    testList = pickle.load(handle)
+# +
+with open(f'batchLyapData/batchLyapDict0.pickle', 'rb') as handle:
+    WholeList = pickle.load(handle)
+
+for nbatch in range(1,101):
+
+    with open(f'batchLyapData/batchLyapDict{nbatch}.pickle', 'rb') as handle:
+        batchLyapDict = pickle.load(handle)
+        
+    for width in widths: 
+
+        WholeList[f'{width}'] = WholeList[f'{width}'] + batchLyapDict[f'{width}']
+
+for width in widths: 
+    
+    testList[f'{width}'] = LyapListPairs(WholeList[f'{width}']/100, thetaRange)
 
 # +
 import matplotlib.pyplot as plt
 from scipy.optimize import curve_fit
 
-width = 20
+width = 10
+
+plt.scatter(testList[f'{width}'][:,0], testList[f'{width}'][:,1], s=15);
+
+# +
+import matplotlib.pyplot as plt
+from scipy.optimize import curve_fit
+
+width = 10
 GRange = critVal * (1 + np.linspace(-0.16, 0.16, 65))
 
 def gauss(x, H, A, x0, sigma):
@@ -241,3 +283,7 @@ plt.scatter(testList[f'{width}'][:,0], testList[f'{width}'][:,1], s=15);
 plt.plot(range, gauss(range, *GaussianFit));
 plt.vlines(GaussianFit[2],min(testList[f'{width}'][:,1]), max(testList[f'{width}'][:,1]), color='red');
 print(GaussianFit[2])
+# -
+
+with open('lyapDict.pickle', 'rb') as handle:
+    testList = pickle.load(handle)
