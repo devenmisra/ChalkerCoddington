@@ -249,6 +249,28 @@ for width in widths:
     testList[f'{width}'] = LyapListPairs(WholeList[f'{width}']/10, thetaRange)
 
 # +
+completeList = dict()
+
+with open('batchLyapDataP0/batchLyapDict0.pickle', 'rb') as handle:
+    aggList = pickle.load(handle)
+
+for nbatch in range(0,10): 
+
+    with open(f'batchLyapDataP0/batchLyapDict{nbatch}.pickle', 'rb') as handle:
+        batchLyapDict = pickle.load(handle)
+
+    for width in widths: 
+        
+        aggList[f'{width}'] = aggList[f'{width}'] + batchLyapDict[f'{width}']
+
+for width in widths: 
+    
+    completeList[f'{width}'] = LyapListPairs(aggList[f'{width}']/10, thetaRange)
+
+with open('completeLyapDataP0.pickle', 'wb') as handle: 
+    pickle.dump(aggList, handle, protocol=pickle.HIGHEST_PROTOCOL)
+
+# +
 import matplotlib.pyplot as plt
 
 for width in widths: 
