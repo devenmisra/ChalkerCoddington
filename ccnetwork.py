@@ -268,7 +268,7 @@ for width in widths:
     completeList[f'{width}'] = LyapListPairs(aggList[f'{width}']/10, thetaRange)
 
 with open('completeLyapDataP0.pickle', 'wb') as handle: 
-    pickle.dump(aggList, handle, protocol=pickle.HIGHEST_PROTOCOL)
+    pickle.dump(completeList, handle, protocol=pickle.HIGHEST_PROTOCOL)
 
 # +
 import matplotlib.pyplot as plt
