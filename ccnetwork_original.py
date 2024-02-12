@@ -98,7 +98,8 @@ def RMatrixGenerator(MatrixType, ATransfMatList, BTransfMatList, m):
 
 # -
 
-def TransfMatGenerator_withReplacement(Theta, m, nw, seed, insertProbability=0.0): 
+def TransfMatGenerator_withReplacement(Theta, m, nw, seed, insertProbability=0): 
+    
     S = 1/np.cos(Theta)
     T = np.tan(Theta)
     Cs = 1/np.sin(Theta)
@@ -209,10 +210,11 @@ def LyapListPairs(WholeList, ThetaList):
 import pickle
 import time
 
-lengths = [10000, 10000, 15000, 25000, 25000, 50000]
-widths = [10, 20, 30, 40, 50, 60]
+testList = dict()
+lengths = [10000, 10000, 10000, 10000, 10000, 10000]
+widths = [2, 4, 8, 16, 32, 64]
 critVal = np.pi/4
-thetaRange = critVal + np.linspace(-0.16, 0.16, 33)
+thetaRange = critVal + np.linspace(-1.3, 1.3, 27)
 
 for nbatch in range(0,10): 
 
@@ -226,18 +228,18 @@ for nbatch in range(0,10):
     
         testList[f'{width}'] = BatchList(length, length, width, 1, thetaRange, seed=nbatch)
 
-        with open(f'batchLyapDataP0/batchLyapDict{nbatch}.pickle', 'wb') as handle:
+        with open(f'batchLyapDataP0_Original/batchLyapDict{nbatch}.pickle', 'wb') as handle:
             pickle.dump(testList, handle, protocol=pickle.HIGHEST_PROTOCOL)
 
         print(f'Completed M = {width} | CPU Time: {time.process_time() - start}')
 
 # +
-with open(f'batchLyapDataP0/batchLyapDict0.pickle', 'rb') as handle:
+with open(f'batchLyapDataP0_Original/batchLyapDict0.pickle', 'rb') as handle:
     WholeList = pickle.load(handle)
 
 for nbatch in range(1,10):
 
-    with open(f'batchLyapDataP0/batchLyapDict{nbatch}.pickle', 'rb') as handle:
+    with open(f'batchLyapDataP0_Original/batchLyapDict{nbatch}.pickle', 'rb') as handle:
         batchLyapDict = pickle.load(handle)
         
     for width in widths: 
@@ -255,26 +257,25 @@ for width in widths:
     x = testList[f'{width}'][:,0]
     y = testList[f'{width}'][:,1]/(width/2)
     plt.scatter(x, y, s=3);
-    print(x[16], y[16])
+    print(x[13], y[13])
 # -
 
 for width in widths: 
     x = np.arctanh(np.sin(testList[f'{width}'][:,0]))
     y = testList[f'{width}'][:,1]/(width/2)
     plt.scatter(x, y, s=3);
-    print(x[16], y[16])
+    print(x[13], y[13])
 
 for width in widths: 
     x = np.arctanh(np.sin(testList[f'{width}'][:,0] - critVal))
     y = testList[f'{width}'][:,1]/(width/2)
     plt.scatter(x, y, s=3);
-    print(x[16], y[16])
+    print(x[13], y[13])
 
 # +
-import matplotlib.pyplot as plt
 from scipy.optimize import curve_fit
 
-width = 60
+width = 2
 GRange = critVal * (1 + np.linspace(-0.16, 0.16, 65))
 
 def gauss(x, H, A, x0, sigma):
@@ -286,6 +287,3 @@ plt.scatter(testList[f'{width}'][:,0], testList[f'{width}'][:,1], s=15);
 plt.plot(thetaRange, gauss(thetaRange, *GaussianFit));
 plt.vlines(GaussianFit[2],min(testList[f'{width}'][:,1]), max(testList[f'{width}'][:,1]), color='red');
 print(GaussianFit[2])
-# -
-
-
