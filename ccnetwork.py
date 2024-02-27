@@ -147,7 +147,7 @@ def LyapFinder(w, MatrixList):
             H = np.linalg.multi_dot(MatrixList[q*w : (q+1)*w])
 
         B = H @ L
-        LU = sp.linalg.lu(B)[1:3]
+        LU = sp.linalg.lu(B, permute_l=True)
         L = LU[0]
         LyapList = LyapList + np.log(np.abs(np.diagonal(LU[1])))
 
@@ -209,10 +209,14 @@ def LyapListPairs(WholeList, ThetaList):
 import pickle
 import time
 
-lengths = [10000, 10000, 15000, 25000, 25000, 50000]
-widths = [10, 20, 30, 40, 50, 60]
+# +
+lengths = [10000, 10000, 10000, 10000, 10000, 10000, 10000]
+widths = [2, 4, 8, 16, 32, 64]
 critVal = np.pi/4
-thetaRange = critVal + np.linspace(-0.16, 0.16, 33)
+thetaRange = np.linspace(critVal-0.4, critVal+0.4, 33)
+
+iP = 0.0
+# -
 
 for nbatch in range(0,10): 
 
@@ -226,18 +230,18 @@ for nbatch in range(0,10):
     
         testList[f'{width}'] = BatchList(length, length, width, 1, thetaRange, seed=nbatch)
 
-        with open(f'batchLyapDataP0/batchLyapDict{nbatch}.pickle', 'wb') as handle:
+        with open(f'batchLyapDataP{iP}/batchLyapDict{nbatch}.pickle', 'wb') as handle:
             pickle.dump(testList, handle, protocol=pickle.HIGHEST_PROTOCOL)
 
         print(f'Completed M = {width} | CPU Time: {time.process_time() - start}')
 
 # +
-with open(f'batchLyapDataP0/batchLyapDict0.pickle', 'rb') as handle:
+with open(f'batchLyapDataP{iP}/batchLyapDict0.pickle', 'rb') as handle:
     WholeList = pickle.load(handle)
 
-for nbatch in range(1,10):
+for nbatch in range(0,10):
 
-    with open(f'batchLyapDataP0/batchLyapDict{nbatch}.pickle', 'rb') as handle:
+    with open(f'batchLyapDataP{iP}/batchLyapDict{nbatch}.pickle', 'rb') as handle:
         batchLyapDict = pickle.load(handle)
         
     for width in widths: 
@@ -251,12 +255,12 @@ for width in widths:
 # +
 completeList = dict()
 
-with open('batchLyapDataP0/batchLyapDict0.pickle', 'rb') as handle:
+with open(f'batchLyapDataP{iP}/batchLyapDict0.pickle', 'rb') as handle:
     aggList = pickle.load(handle)
 
 for nbatch in range(0,10): 
 
-    with open(f'batchLyapDataP0/batchLyapDict{nbatch}.pickle', 'rb') as handle:
+    with open(f'batchLyapDataP{iP}/batchLyapDict{nbatch}.pickle', 'rb') as handle:
         batchLyapDict = pickle.load(handle)
 
     for width in widths: 
@@ -267,13 +271,13 @@ for width in widths:
     
     completeList[f'{width}'] = LyapListPairs(aggList[f'{width}']/10, thetaRange)
 
-with open('completeLyapDataP0.pickle', 'wb') as handle: 
+with open(f'completeLyapDataP{iP}.pickle', 'wb') as handle: 
     pickle.dump(completeList, handle, protocol=pickle.HIGHEST_PROTOCOL)
 
 # +
 import matplotlib.pyplot as plt
 
-for width in widths: 
+for width in [2, 4, 8, 16]: 
     x = testList[f'{width}'][:,0]
     y = testList[f'{width}'][:,1]/(width/2)
     plt.scatter(x, y, s=3);
@@ -296,7 +300,7 @@ for width in widths:
 import matplotlib.pyplot as plt
 from scipy.optimize import curve_fit
 
-width = 60
+width = 64
 GRange = critVal * (1 + np.linspace(-0.16, 0.16, 65))
 
 def gauss(x, H, A, x0, sigma):
@@ -308,6 +312,3 @@ plt.scatter(testList[f'{width}'][:,0], testList[f'{width}'][:,1], s=15);
 plt.plot(thetaRange, gauss(thetaRange, *GaussianFit));
 plt.vlines(GaussianFit[2],min(testList[f'{width}'][:,1]), max(testList[f'{width}'][:,1]), color='red');
 print(GaussianFit[2])
-# -
-
-
