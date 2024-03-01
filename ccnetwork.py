@@ -12,6 +12,18 @@
 #     name: python3
 # ---
 
+# +
+import os
+
+#OpenBLAS Optimization for TR3970X
+os.environ["OPENBLAS_CORETYPE"] = "Zen"
+os.environ["OPENBLAS_NUM_THREADS"] = '64'
+
+#MKL Optimization for TR3970X
+#os.environ["LD_PRELOAD"] = "~/libfakeintel.so"
+#os.environ["MKL_ENABLE_INSTRUCTIONS"] = "AVX2"
+# -
+
 # A & B Matrices
 
 # +
@@ -115,10 +127,10 @@ def TransfMatGenerator_withReplacement(Theta, m, nw, seed, insertProbability=0.0
         diagBlocksB = extract_block_diag_B(B, 2, m)
 
         for i in range(m): 
-            if np.random.rand(m)[i] > insertProbability:
+            if np.random.rand(2*m)[i] < insertProbability:
                 diagBlocksA[i] = RMatrixGenerator('A', diagBlocksA, diagBlocksB, m)
 
-            if np.random.rand(m)[i] > insertProbability:
+            if np.random.rand(2*m)[m+i] < insertProbability:
                 diagBlocksB[i] = RMatrixGenerator('B', diagBlocksA, diagBlocksB, m)
 
         A_R = sp.linalg.block_diag(*diagBlocksA)
@@ -186,11 +198,11 @@ def ListLyap(ngen, n, m, w, ThetaList, seed):
 
 # Extra Functions for Batch Processing
 
-def BatchList(ngen, n, m, w, ThetaList, seed):
+def BatchList(ngen, n, m, w, ThetaList, seed, insertProbability):
     nmax = min([ngen, n])
     WholeList = []
     for j in range(0, len(ThetaList)):
-        MatrixList = TransfMatGenerator_withReplacement(ThetaList[j], m, ngen*w, seed)
+        MatrixList = TransfMatGenerator_withReplacement(ThetaList[j], m, ngen*w, seed, insertProbability)
         WholeList.append(LyapFinder(w, MatrixList[0:nmax]))
 
     return np.array(WholeList)
@@ -209,14 +221,13 @@ def LyapListPairs(WholeList, ThetaList):
 import pickle
 import time
 
-# +
-lengths = [10000, 10000, 10000, 10000, 10000, 10000, 10000]
-widths = [2, 4, 8, 16, 32, 64]
+lengths = [10000, 10000, 10000, 10000, 10000, 10000]
+widths = [20, 40, 60, 80, 100, 120, 140]
 critVal = np.pi/4
-thetaRange = np.linspace(critVal-0.4, critVal+0.4, 33)
+thetaRange = np.linspace(critVal-0.4, critVal+0.4, 17)
 
+# +
 iP = 0.0
-# -
 
 for nbatch in range(0,10): 
 
@@ -228,7 +239,7 @@ for nbatch in range(0,10):
 
         start = time.process_time()
     
-        testList[f'{width}'] = BatchList(length, length, width, 1, thetaRange, seed=nbatch)
+        testList[f'{width}'] = BatchList(length, length, width, 1, thetaRange, seed=nbatch, insertProbability=iP)
 
         with open(f'batchLyapDataP{iP}/batchLyapDict{nbatch}.pickle', 'wb') as handle:
             pickle.dump(testList, handle, protocol=pickle.HIGHEST_PROTOCOL)
@@ -239,7 +250,7 @@ for nbatch in range(0,10):
 with open(f'batchLyapDataP{iP}/batchLyapDict0.pickle', 'rb') as handle:
     WholeList = pickle.load(handle)
 
-for nbatch in range(0,10):
+for nbatch in range(1,10):
 
     with open(f'batchLyapDataP{iP}/batchLyapDict{nbatch}.pickle', 'rb') as handle:
         batchLyapDict = pickle.load(handle)
@@ -258,7 +269,7 @@ completeList = dict()
 with open(f'batchLyapDataP{iP}/batchLyapDict0.pickle', 'rb') as handle:
     aggList = pickle.load(handle)
 
-for nbatch in range(0,10): 
+for nbatch in range(1,10): 
 
     with open(f'batchLyapDataP{iP}/batchLyapDict{nbatch}.pickle', 'rb') as handle:
         batchLyapDict = pickle.load(handle)
@@ -275,23 +286,69 @@ with open(f'completeLyapDataP{iP}.pickle', 'wb') as handle:
     pickle.dump(completeList, handle, protocol=pickle.HIGHEST_PROTOCOL)
 
 # +
+iP = 0.5
+
+for nbatch in range(0,10): 
+
+    print(f"Processing Batch {nbatch}")
+
+    testList = dict()
+
+    for length, width in zip(lengths, widths): 
+
+        start = time.process_time()
+    
+        testList[f'{width}'] = BatchList(length, length, width, 1, thetaRange, seed=nbatch, insertProbability=iP)
+
+        with open(f'batchLyapDataP{iP}/batchLyapDict{nbatch}.pickle', 'wb') as handle:
+            pickle.dump(testList, handle, protocol=pickle.HIGHEST_PROTOCOL)
+
+        print(f'Completed M = {width} | CPU Time: {time.process_time() - start}')
+
+# +
+with open(f'batchLyapDataP{iP}/batchLyapDict0.pickle', 'rb') as handle:
+    WholeList = pickle.load(handle)
+
+for nbatch in range(1,5):
+
+    with open(f'batchLyapDataP{iP}/batchLyapDict{nbatch}.pickle', 'rb') as handle:
+        batchLyapDict = pickle.load(handle)
+        
+    for width in widths: 
+
+        WholeList[f'{width}'] = WholeList[f'{width}'] + batchLyapDict[f'{width}']
+
+for width in widths: 
+    
+    testList[f'{width}'] = LyapListPairs(WholeList[f'{width}']/5, thetaRange)
+
+# +
+completeList = dict()
+
+with open(f'batchLyapDataP{iP}/batchLyapDict0.pickle', 'rb') as handle:
+    aggList = pickle.load(handle)
+
+for nbatch in range(1,5): 
+
+    with open(f'batchLyapDataP{iP}/batchLyapDict{nbatch}.pickle', 'rb') as handle:
+        batchLyapDict = pickle.load(handle)
+
+    for width in widths: 
+        
+        aggList[f'{width}'] = aggList[f'{width}'] + batchLyapDict[f'{width}']
+
+for width in widths: 
+    
+    completeList[f'{width}'] = LyapListPairs(aggList[f'{width}']/5, thetaRange)
+
+with open(f'completeLyapDataP{iP}.pickle', 'wb') as handle: 
+    pickle.dump(completeList, handle, protocol=pickle.HIGHEST_PROTOCOL)
+
+# +
 import matplotlib.pyplot as plt
 
 for width in [2, 4, 8, 16]: 
     x = testList[f'{width}'][:,0]
-    y = testList[f'{width}'][:,1]/(width/2)
-    plt.scatter(x, y, s=3);
-    print(x[16], y[16])
-# -
-
-for width in widths: 
-    x = np.arctanh(np.sin(testList[f'{width}'][:,0]))
-    y = testList[f'{width}'][:,1]/(width/2)
-    plt.scatter(x, y, s=3);
-    print(x[16], y[16])
-
-for width in widths: 
-    x = np.arctanh(np.sin(testList[f'{width}'][:,0] - critVal))
     y = testList[f'{width}'][:,1]/(width/2)
     plt.scatter(x, y, s=3);
     print(x[16], y[16])
