@@ -5,7 +5,7 @@
 #       extension: .py
 #       format_name: light
 #       format_version: '1.5'
-#       jupytext_version: 1.16.0
+#       jupytext_version: 1.16.1
 #   kernelspec:
 #     display_name: Python 3 (ipykernel)
 #     language: python
@@ -110,13 +110,13 @@ def RMatrixGenerator(MatrixType, ATransfMatList, BTransfMatList, m):
 
 # -
 
-def TransfMatGenerator_withReplacement(Theta, m, nw, seed, insertProbability=0.0): 
+def TransfMatGenerator_withReplacement(Theta, m, nw, rngseed, insertProbability=0.0): 
     S = 1/np.cos(Theta)
     T = np.tan(Theta)
     Cs = 1/np.sin(Theta)
     Co = np.cos(Theta)/np.sin(Theta)
-    np.random.seed(seed)
-    phases = np.exp(2*np.pi*1j*np.random.rand(nw, 2, 2*m))
+    rng = np.random.default_rng(seed = rngseed)
+    phases = np.exp((np.pi/2) * 1j * rng.uniform(low=-1, high=1, size=(nw, 2, 2*m)))
     MatrixList = []
     
     for j in range(0, nw):
@@ -127,10 +127,10 @@ def TransfMatGenerator_withReplacement(Theta, m, nw, seed, insertProbability=0.0
         diagBlocksB = extract_block_diag_B(B, 2, m)
 
         for i in range(m): 
-            if np.random.rand(2*m)[i] < insertProbability:
+            if rng.uniform(low=0, high=1, size=2*m)[i] < insertProbability:
                 diagBlocksA[i] = RMatrixGenerator('A', diagBlocksA, diagBlocksB, m)
 
-            if np.random.rand(2*m)[m+i] < insertProbability:
+            if rng.uniform(low=0, high=1, size=2*m)[m+i] < insertProbability:
                 diagBlocksB[i] = RMatrixGenerator('B', diagBlocksA, diagBlocksB, m)
 
         A_R = sp.linalg.block_diag(*diagBlocksA)
@@ -221,8 +221,8 @@ def LyapListPairs(WholeList, ThetaList):
 import pickle
 import time
 
-lengths = [10000, 10000, 10000, 10000, 10000, 10000]
-widths = [20, 40, 60, 80, 100, 120, 140]
+lengths = [1000, 1000, 1000, 1000, 1000, 1000]
+widths = [20, 40, 60, 80, 100, 120]
 critVal = np.pi/4
 thetaRange = np.linspace(critVal-0.4, critVal+0.4, 17)
 
@@ -347,17 +347,17 @@ with open(f'completeLyapDataP{iP}.pickle', 'wb') as handle:
 # +
 import matplotlib.pyplot as plt
 
-for width in [2, 4, 8, 16]: 
+for width in [20, 40, 80, 100, 120]: 
     x = testList[f'{width}'][:,0]
     y = testList[f'{width}'][:,1]/(width/2)
     plt.scatter(x, y, s=3);
-    print(x[16], y[16])
+    print(x[9], y[9])
 
 # +
 import matplotlib.pyplot as plt
 from scipy.optimize import curve_fit
 
-width = 64
+width = 80
 GRange = critVal * (1 + np.linspace(-0.16, 0.16, 65))
 
 def gauss(x, H, A, x0, sigma):
@@ -369,3 +369,6 @@ plt.scatter(testList[f'{width}'][:,0], testList[f'{width}'][:,1], s=15);
 plt.plot(thetaRange, gauss(thetaRange, *GaussianFit));
 plt.vlines(GaussianFit[2],min(testList[f'{width}'][:,1]), max(testList[f'{width}'][:,1]), color='red');
 print(GaussianFit[2])
+# -
+
+
