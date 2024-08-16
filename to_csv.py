@@ -21,7 +21,7 @@ iP = 0.0
 with open(f"completeLyapDataP{iP}.pickle", "rb") as f:
     object = pkl.load(f)
     
-widths = [2, 4, 8, 16, 32, 64]
+widths = [20, 40, 80, 100, 120]
 
 for width in widths: 
 
